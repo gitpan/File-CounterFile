@@ -1,6 +1,6 @@
 package File::CounterFile;
 
-# $Id: CounterFile.pm,v 0.15 2002/07/30 14:45:06 gisle Exp $
+# $Id: CounterFile.pm,v 0.18 2003/10/06 12:47:40 gisle Exp $
 
 require 5.004;
 
@@ -13,7 +13,7 @@ use Fcntl qw(O_RDWR O_CREAT);
 use vars qw($VERSION $MAGIC $DEFAULT_INITIAL $DEFAULT_DIR);
 
 sub Version { $VERSION; }
-$VERSION = "1.00";
+$VERSION = "1.01";
 
 $MAGIC = "#COUNTER-1.0\n";             # first line in counter files
 $DEFAULT_INITIAL = 0;                  # default initial counter value
@@ -49,6 +49,7 @@ sub new
 	chomp($value);
     }
     else {
+	seek(F, 0, 0);
 	print F $MAGIC;
 	print F "$initial\n";
 	$value = $initial;
@@ -137,15 +138,19 @@ sub dec
     my($self) = @_;
 
     if ($self->locked) {
-	croak "Autodecrement is not magical in perl"
-	    unless $self->{'value'} =~ /^\d+$/;
+	unless ($self->{'value'} =~ /^\d+$/) {
+	    $self->unlock;
+	    croak "Autodecrement is not magical in perl";
+	}
 	$self->{'value'}--;
 	$self->{updated} = 1;
     }
     else {
 	$self->lock;
-	croak "Autodecrement is not magical in perl"
-	    unless $self->{'value'} =~ /^\d+$/;
+	unless ($self->{'value'} =~ /^\d+$/) {
+	    $self->unlock;
+	    croak "Autodecrement is not magical in perl";
+	}
 	$self->{'value'}--;
 	$self->{updated} = 1;
 	$self->unlock;
@@ -234,7 +239,7 @@ and you can interpolate counters diretly into strings.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1995-1998,2002 Gisle Aas. All rights reserved.
+Copyright (c) 1995-1998,2002,2003 Gisle Aas. All rights reserved.
 
 This library is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
