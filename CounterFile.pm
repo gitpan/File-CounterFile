@@ -1,6 +1,6 @@
 package File::CounterFile;
 
-# $Id: CounterFile.pm,v 0.22 2004/01/08 12:29:13 gisle Exp $
+# $Id: CounterFile.pm,v 0.23 2004/01/23 08:37:18 gisle Exp $
 
 require 5.004;
 
@@ -8,12 +8,22 @@ use strict;
 
 use Carp   qw(croak);
 use Symbol qw(gensym);
-use Fcntl qw(LOCK_EX SEEK_SET O_RDWR O_CREAT);
+use Fcntl qw(LOCK_EX O_RDWR O_CREAT);
+
+BEGIN {
+    # older version of Fcntl did not know about SEEK_SET
+    if ($] < 5.006) {
+	*SEEK_SET = sub () { 0 };
+    }
+    else {
+	Fcntl->import("SEEK_SET");
+    }
+}
 
 use vars qw($VERSION $MAGIC $DEFAULT_INITIAL $DEFAULT_DIR);
 
 sub Version { $VERSION; }
-$VERSION = "1.03";
+$VERSION = "1.04";
 
 $MAGIC = "#COUNTER-1.0\n";             # first line in counter files
 $DEFAULT_INITIAL = 0;                  # default initial counter value
