@@ -1,6 +1,6 @@
 package File::CounterFile;
 
-# $Id: CounterFile.pm,v 0.18 2003/10/06 12:47:40 gisle Exp $
+# $Id: CounterFile.pm,v 0.19 2003/11/21 09:56:20 gisle Exp $
 
 require 5.004;
 
@@ -13,7 +13,7 @@ use Fcntl qw(O_RDWR O_CREAT);
 use vars qw($VERSION $MAGIC $DEFAULT_INITIAL $DEFAULT_DIR);
 
 sub Version { $VERSION; }
-$VERSION = "1.01";
+$VERSION = "1.02";
 
 $MAGIC = "#COUNTER-1.0\n";             # first line in counter files
 $DEFAULT_INITIAL = 0;                  # default initial counter value
