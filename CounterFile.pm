@@ -1,6 +1,6 @@
 package File::CounterFile;
 
-# $Id: CounterFile.pm,v 0.19 2003/11/21 09:56:20 gisle Exp $
+# $Id: CounterFile.pm,v 0.22 2004/01/08 12:29:13 gisle Exp $
 
 require 5.004;
 
@@ -8,12 +8,12 @@ use strict;
 
 use Carp   qw(croak);
 use Symbol qw(gensym);
-use Fcntl qw(O_RDWR O_CREAT);
+use Fcntl qw(LOCK_EX SEEK_SET O_RDWR O_CREAT);
 
 use vars qw($VERSION $MAGIC $DEFAULT_INITIAL $DEFAULT_DIR);
 
 sub Version { $VERSION; }
-$VERSION = "1.02";
+$VERSION = "1.03";
 
 $MAGIC = "#COUNTER-1.0\n";             # first line in counter files
 $DEFAULT_INITIAL = 0;                  # default initial counter value
@@ -41,7 +41,7 @@ sub new
     local($/, $\) = ("\n", undef);
     local *F;
     sysopen(F, $file, O_RDWR|O_CREAT) or croak("Can't open $file: $!");
-    flock(F, 2) or croak("Can't flock: $!");
+    flock(F, LOCK_EX) or croak("Can't flock: $!");
     my $first_line = <F>;
     if (defined $first_line) {
 	croak "Bad counter magic '$first_line' in $file" unless $first_line eq $MAGIC;
@@ -49,7 +49,7 @@ sub new
 	chomp($value);
     }
     else {
-	seek(F, 0, 0);
+	seek(F, 0, SEEK_SET);
 	print F $MAGIC;
 	print F "$initial\n";
 	$value = $initial;
@@ -79,7 +79,7 @@ sub lock
     my $file = $self->{file};
 
     open($fh, "+<$file") or croak "Can't open $file: $!";
-    flock($fh, 2) or croak "Can't flock: $!";  # 2 = exlusive lock
+    flock($fh, LOCK_EX) or croak "Can't flock: $!";  # 2 = exlusive lock
 
     local($/) = "\n";
     my $magic = <$fh>;
@@ -105,7 +105,7 @@ sub unlock
     if ($self->{updated}) {
 	# write back new value
 	local($\) = undef;
-	seek($fh, 0, 0) or croak "Can't seek to beginning: $!";
+	seek($fh, 0, SEEK_SET) or croak "Can't seek to beginning: $!";
 	print $fh $MAGIC;
 	print $fh "$self->{'value'}\n";
     }
@@ -201,8 +201,8 @@ File::CounterFile - Persistent counter class
 
 This module implements a persistent counter class.  Each counter is
 represented by a separate file in the file system.  File locking is
-applied, so multiple processes might try to access the same counters
-at the same time without risk of counter destruction.
+applied, so multiple processes can attempt to access a counter
+simultaneously without risk of counter destruction.
 
 You give the file name as the first parameter to the object
 constructor (C<new>).  The file is created if it does not exist.
@@ -210,16 +210,16 @@ constructor (C<new>).  The file is created if it does not exist.
 If the file name does not start with "/" or ".", then it is
 interpreted as a file relative to C<$File::CounterFile::DEFAULT_DIR>.
 The default value for this variable is initialized from the
-environment variable C<TMPDIR>, or F</usr/tmp> is no environment
+environment variable C<TMPDIR>, or F</usr/tmp> if no environment
 variable is defined.  You may want to assign a different value to this
 variable before creating counters.
 
-If you pass a second parameter to the constructor, that sets the
+If you pass a second parameter to the constructor, it sets the
 initial value for a new counter.  This parameter only takes effect
 when the file is created (i.e. it does not exist before the call).
 
 When you call the C<inc()> method, you increment the counter value by
-one. When you call C<dec()> the counter value is decrementd.  In both
+one. When you call C<dec()>, the counter value is decremented.  In both
 cases the new value is returned.  The C<dec()> method only works for
 numerical counters (digits only).
 
@@ -227,15 +227,15 @@ You can peek at the value of the counter (without incrementing it) by
 using the C<value()> method.
 
 The counter can be locked and unlocked with the C<lock()> and
-C<unlock()> methods.  Incrementing and value retrieval is faster when
+C<unlock()> methods.  Incrementing and value retrieval are faster when
 the counter is locked, because we do not have to update the counter
 file all the time.  You can query whether the counter is locked with
 the C<locked()> method.
 
 There is also an operator overloading interface to the
-File::CounterFile object.  This means that you might use the C<++>
-operator for incrementing the counter, C<--> operator for decrementing
-and you can interpolate counters diretly into strings.
+File::CounterFile object.  This means that you can use the C<++>
+operator for incrementing and the C<--> operator for decrementing the counter,
+and you can interpolate counters directly into strings.
 
 =head1 COPYRIGHT
 
